@@ -1,3 +1,0 @@
-/**
- *  ARX operation implementation
- */

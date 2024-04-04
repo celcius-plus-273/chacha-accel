@@ -1,7 +1,10 @@
 `include "src/round.sv"
 `default_nettype none
+`timescale 1ns/1ns
 
 module tb;
+    // Waveform output file path
+    localparam VCD_PATH = "test/round/round_test.vcd";
 
     // CLOCK STUFF
     localparam CLOCK_PERIOD = 10;
@@ -19,7 +22,7 @@ module tb;
     reg [31:0] input_a, input_b, input_c, input_d = 0;
     wire [31:0] output_a, output_b, output_c, output_d;
 
-    round chacha_round (
+    quarter_round chacha_round (
         .input_a(input_a),
         .input_b(input_b),
         .input_c(input_c),
@@ -31,6 +34,9 @@ module tb;
     );
 
     initial begin
+        $dumpfile(VCD_PATH); 
+        $dumpvars(0, tb);
+
         // assign 0 input
         input_a <= 32'h0012DFFA;
         input_b <= 32'hAAFB4CD5;
@@ -39,7 +45,7 @@ module tb;
 
         #10 $display("initializing...");
 
-        // check if output gets propagated?
+        // check if output gets propagated
         $display("A_out: %x", output_a);
         $display("B_out: %x", output_b);
         $display("C_out: %x", output_c);
