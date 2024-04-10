@@ -127,16 +127,19 @@ endmodule
 // Full ChaCha-20 Round (4 quarter rounds)
 module round (
     // input is a ksg 4x4 array
-    input wire [127:0]  input_col_a, 
-    input wire [127:0]  input_col_b, 
-    input wire [127:0]  input_col_c, 
-    input wire [127:0]  input_col_d,
+    input wire [127:0]  input_a, 
+    input wire [127:0]  input_b, 
+    input wire [127:0]  input_c, 
+    input wire [127:0]  input_d,
 
     // output ports
-    output wire [127:0]  output_col_a, 
-    output wire [127:0]  output_col_b, 
-    output wire [127:0]  output_col_c, 
-    output wire [127:0]  output_col_d
+    output wire [127:0]  output_a, 
+    output wire [127:0]  output_b, 
+    output wire [127:0]  output_c, 
+    output wire [127:0]  output_d,
+
+    // control signal
+    input wire op_type  // 0: column, 1: diagonal
 );
     /**
     *   A full round simply consists of performing 4 quarter round operations
@@ -146,51 +149,105 @@ module round (
     *   4 quarter round operations in parallel
     */
     quarter_round quarter_module_0 (
-        .input_a(input_col_a[31:0]),
-        .input_b(input_col_b[31:0]),
-        .input_c(input_col_c[31:0]),
-        .input_d(input_col_d[31:0]),
+        .input_a(input_a_0),
+        .input_b(input_b_0),
+        .input_c(input_c_0),
+        .input_d(input_d_0),
 
-        .output_a(output_col_a[31:0]),
-        .output_b(output_col_b[31:0]),
-        .output_c(output_col_c[31:0]),
-        .output_d(output_col_d[31:0])
+        .output_a(output_a_0),
+        .output_b(output_b_0),
+        .output_c(output_c_0),
+        .output_d(output_d_0)
     );
 
     quarter_round quarter_module_1 (
-        .input_a(input_col_a[63:32]),
-        .input_b(input_col_b[63:32]),
-        .input_c(input_col_c[63:32]),
-        .input_d(input_col_d[63:32]),
+        .input_a(input_a_1),
+        .input_b(input_b_1),
+        .input_c(input_c_1),
+        .input_d(input_d_1),
 
-        .output_a(output_col_a[63:32]),
-        .output_b(output_col_b[63:32]),
-        .output_c(output_col_c[63:32]),
-        .output_d(output_col_d[63:32])
+        .output_a(output_a_1),
+        .output_b(output_b_1),
+        .output_c(output_c_1),
+        .output_d(output_d_1)
     );
 
     quarter_round quarter_module_2 (
-        .input_a(input_col_a[95:64]),
-        .input_b(input_col_b[95:64]),
-        .input_c(input_col_c[95:64]),
-        .input_d(input_col_d[95:64]),
+        .input_a(input_a_2),
+        .input_b(input_b_2),
+        .input_c(input_c_2),
+        .input_d(input_d_2),
 
-        .output_a(output_col_a[95:64]),
-        .output_b(output_col_b[95:64]),
-        .output_c(output_col_c[95:64]),
-        .output_d(output_col_d[95:64])
+        .output_a(output_a_2),
+        .output_b(output_b_2),
+        .output_c(output_c_2),
+        .output_d(output_d_2)
     );
 
     quarter_round quarter_module_3 (
-        .input_a(input_col_a[127:96]),
-        .input_b(input_col_b[127:96]),
-        .input_c(input_col_c[127:96]),
-        .input_d(input_col_d[127:96]),
+        .input_a(input_a_3),
+        .input_b(input_b_3),
+        .input_c(input_c_3),
+        .input_d(input_d_3),
 
-        .output_a(output_col_a[127:96]),
-        .output_b(output_col_b[127:96]),
-        .output_c(output_col_c[127:96]),
-        .output_d(output_col_d[127:96])
+        .output_a(output_a_3),
+        .output_b(output_b_3),
+        .output_c(output_c_3),
+        .output_d(output_d_3)
     );
+
+    // To implement diagonal mixing we will mux the input and output of the 
+    // quarter round modules
+    wire [31:0] input_a_0, input_a_1, input_a_2, input_a_3;
+    wire [31:0] input_b_0, input_b_1, input_b_2, input_b_3;
+    wire [31:0] input_c_0, input_c_1, input_c_2, input_c_3;
+    wire [31:0] input_d_0, input_d_1, input_d_2, input_d_3;
+
+    wire [31:0] output_a_0, output_a_1, output_a_2, output_a_3;
+    wire [31:0] output_b_0, output_b_1, output_b_2, output_b_3;
+    wire [31:0] output_c_0, output_c_1, output_c_2, output_c_3;
+    wire [31:0] output_d_0, output_d_1, output_d_2, output_d_3;
+    
+    // MUX input values to enable selection between column-wise and diagonal-wise mixing
+    assign input_a_0 = input_a[31:0];
+    assign input_b_0 = op_type ? input_b[63:32]     : input_b[31:0];
+    assign input_c_0 = op_type ? input_c[95:64]     : input_c[31:0];
+    assign input_d_0 = op_type ? input_d[127:96]    : input_d[31:0];
+
+    assign input_a_1 = input_a[63:32];
+    assign input_b_1 = op_type ? input_b[95:64]     : input_b[63:32];
+    assign input_c_1 = op_type ? input_c[127:96]    : input_c[63:32];
+    assign input_d_1 = op_type ? input_d[31:0]      : input_d[63:32];
+
+    assign input_a_2 = input_a[95:64];
+    assign input_b_2 = op_type ? input_b[127:96]    : input_b[95:64];
+    assign input_c_2 = op_type ? input_c[31:0]      : input_c[95:64];
+    assign input_d_2 = op_type ? input_d[63:32]     : input_d[95:64];
+
+    assign input_a_3 = input_a[127:96];
+    assign input_b_3 = op_type ? input_b[31:0]      : input_b[127:96];
+    assign input_c_3 = op_type ? input_c[63:32]     : input_c[127:96];
+    assign input_d_3 = op_type ? input_d[95:64]     : input_d[127:96];
+
+    // MUX output values following the same pattern as the input
+    assign output_a[31:0]   = output_a_0;
+    assign output_a[63:32]  = output_a_1;
+    assign output_a[95:64]  = output_a_2;
+    assign output_a[127:96] = output_a_3;
+
+    assign output_b[31:0]   = op_type ? output_b_3 : output_b_0;
+    assign output_b[63:32]  = op_type ? output_b_0 : output_b_1;
+    assign output_b[95:64]  = op_type ? output_b_1 : output_b_2;
+    assign output_b[127:96] = op_type ? output_b_2 : output_b_3;
+
+    assign output_c[31:0]   = op_type ? output_c_2 : output_c_0;
+    assign output_c[63:32]  = op_type ? output_c_3 : output_c_1;
+    assign output_c[95:64]  = op_type ? output_c_0 : output_c_2;
+    assign output_c[127:96] = op_type ? output_c_1 : output_c_3;
+
+    assign output_d[31:0]   = op_type ? output_d_1 : output_d_0;
+    assign output_d[63:32]  = op_type ? output_d_2 : output_d_1;
+    assign output_d[95:64]  = op_type ? output_d_3 : output_d_2;
+    assign output_d[127:96] = op_type ? output_d_0 : output_d_3;
 
 endmodule
