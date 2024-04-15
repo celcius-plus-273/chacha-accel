@@ -1,6 +1,6 @@
 `include "src/round.v"
 
-module key_stream_generator 
+module ksg 
 #(
     parameter NUM_ROUNDS    =   20,     // number of rounds in the KSG
     parameter WORD_SIZE     =   32      // word size in bits
@@ -16,11 +16,10 @@ module key_stream_generator
     output wire [511:0] output_key, 
     // ready-valid hanshake for output data
     output reg valid_out,           // output data is ready to be sent
+    input wire ready_out,           // receiver is ready to receive data
+
     input wire done_out,            // asserted by serializer when data
                                     // has been completely serialized
-    
-    // potentially not needed...
-    input wire ready_out,           // receiver is ready to receive data
 
     // control signals
     input wire reset_n,     // active low reset signal
@@ -87,6 +86,17 @@ module key_stream_generator
                     // de-assert valid_out?
                     valid_out <= 0;
                 end 
+
+                // hardwire constant during initial stage
+                ksg_buffer[3] <= KSG_CONSTANT[31:0];
+                ksg_buffer[2] <= KSG_CONSTANT[63:32];
+                ksg_buffer[1] <= KSG_CONSTANT[95:64];
+                ksg_buffer[0] <= KSG_CONSTANT[127:96];
+        
+                round_buffer[3] <= KSG_CONSTANT[31:0];
+                round_buffer[2] <= KSG_CONSTANT[63:32];
+                round_buffer[1] <= KSG_CONSTANT[95:64];
+                round_buffer[0] <= KSG_CONSTANT[127:96];
             end
 
             /**
@@ -122,7 +132,8 @@ module key_stream_generator
             end
 
             default: begin
-                
+                // nothing
+                $display("[ERROR] Invalid KSG state");
             end 
         endcase
     end
@@ -167,15 +178,9 @@ module key_stream_generator
                 end
             end
 
-            default: begin
-                // We could also map this defaut state to something known
-                // mgiht be beneficial for debugging
-                // although we should never encounter this state
-                buffer_out_a <= 0;
-                buffer_out_b <= 0;
-                buffer_out_c <= 0;
-                buffer_out_d <= 0;
-            end
+            default: 
+                // nothing
+                $display("[ERROR] Invalid KSG state");
         endcase
     end
 
@@ -185,10 +190,15 @@ module key_stream_generator
         $display("[INFO] Resetting KSG module...");
 
         // Hardwire the constant on reset
-        for (i = 0; i < 4; i = i + 1) begin
-            ksg_buffer[i] <= KSG_CONSTANT[(32 * i) + 31 : (32 * i)];
-            round_buffer[i] <= KSG_CONSTANT[(32 * i) + 31 : (32 * i)];
-        end
+        ksg_buffer[3] <= KSG_CONSTANT[31:0];
+        ksg_buffer[2] <= KSG_CONSTANT[63:32];
+        ksg_buffer[1] <= KSG_CONSTANT[95:64];
+        ksg_buffer[0] <= KSG_CONSTANT[127:96];
+        
+        round_buffer[3] <= KSG_CONSTANT[31:0];
+        round_buffer[2] <= KSG_CONSTANT[63:32];
+        round_buffer[1] <= KSG_CONSTANT[95:64];
+        round_buffer[0] <= KSG_CONSTANT[127:96];
 
         // clear memory on reset
         for (i = 4; i < (512 / WORD_SIZE); i = i + 1) begin
@@ -225,7 +235,7 @@ module key_stream_generator
     assign buffer_out_d = {round_buffer[15], round_buffer[14], round_buffer[13], round_buffer[12]};
 
     // ready_in output is asserted when counter is not 16
-    assign ready_in = !ksg_state && done_out;
+    assign ready_in = !ksg_state;
 
     // op_type is just assgined to be 0th bit of round_counter
     wire op_type;
@@ -242,7 +252,7 @@ module key_stream_generator
         (ksg_buffer[3] + round_buffer[3]),
         (ksg_buffer[2] + round_buffer[2]),
         (ksg_buffer[1] + round_buffer[1]),
-        (ksg_buffer[0] + round_buffer[0]),
+        (ksg_buffer[0] + round_buffer[0])
     };
 
     // ROW B
@@ -250,7 +260,7 @@ module key_stream_generator
         (ksg_buffer[7] + round_buffer[7]),
         (ksg_buffer[6] + round_buffer[6]),
         (ksg_buffer[5] + round_buffer[5]),
-        (ksg_buffer[4] + round_buffer[4]),
+        (ksg_buffer[4] + round_buffer[4])
     };
 
     // ROW C
@@ -258,7 +268,7 @@ module key_stream_generator
         (ksg_buffer[11] + round_buffer[11]),
         (ksg_buffer[10] + round_buffer[10]),
         (ksg_buffer[9] + round_buffer[9]),
-        (ksg_buffer[8] + round_buffer[8]),
+        (ksg_buffer[8] + round_buffer[8])
     };
 
     // ROW D
@@ -266,6 +276,6 @@ module key_stream_generator
         (ksg_buffer[15] + round_buffer[15]),
         (ksg_buffer[14] + round_buffer[14]),
         (ksg_buffer[13] + round_buffer[13]),
-        (ksg_buffer[12] + round_buffer[12]),
+        (ksg_buffer[12] + round_buffer[12])
     };
 endmodule
